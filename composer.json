@@ -20,7 +20,7 @@
     },
 	"autoload": {
 		"psr-4": {
-			"MyCloud\\": "mycloudth/rest-api-sdk-php/lib/MyCloud"
+			"MyCloud\\": "lib/MyCloud"
 		}
 	}
 }
