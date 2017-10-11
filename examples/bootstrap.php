@@ -8,31 +8,47 @@ function root_dir( $dir, $levels ) {
 	}
 }
 
-$reason = '';
+$debug = FALSE;
 $loadable = TRUE;
 
-// First, we will assume that this is a standard composer distribution and
-// look for the autoload.php in that context...
+// First, we will assume that this is the development project pulled from
+// git with a top level vendor directory created by 'composer install'
 $topDir = root_dir( __FILE__, 2 );
-print "1) Path[top] '" . $topDir . "'" . PHP_EOL;
+if ( $debug ) {
+	print "1) Path[top] '" . $topDir . "'" . PHP_EOL;
+}
 $composerAutoload = $topDir . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
 if ( ! file_exists($composerAutoload) ) {
-	print "   '" . $composerAutoload . "' NOT FOUND". PHP_EOL;
-	$topDir = root_dir( __FILE__, 1 );
-	print "2) Path[top] '" . $topDir . "'" . PHP_EOL;
-	$composerAutoload = $topDir . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+	// Okay, so this is a standard composer installation, with the full
+	// 'vendor/mycloudth/rest-api-php-sdk' hierarchy
+	if ( $debug ) {
+		print "   '" . $composerAutoload . "' NOT FOUND". PHP_EOL;
+	}
+	$topDir = root_dir( __FILE__, 4 );
+	if ( $debug ) {
+		print "2) Path[top] '" . $topDir . "'" . PHP_EOL;
+	}
+	$composerAutoload = $topDir . DIRECTORY_SEPARATOR . 'autoload.php';
 	if ( ! file_exists($composerAutoload) ) {
 		$loadable = FALSE;
-		$reason = "The 'autoload.php' file was not found. (expected at '" . $composerAutoload . "')";
+		if ( $debug ) {
+			print "   '" . $composerAutoload . "' NOT FOUND". PHP_EOL;
+		}
 	}
 }
 
 if ( $loadable ) {
-	"Loading: '" . $composerAutoload . "'" . PHP_EOL;
+	if ( $debug ) {
+		"Loading: '" . $composerAutoload . "'" . PHP_EOL;
+	}
 	require $composerAutoload;
 } else {
-	print "Could not bootstrap the example program:" . PHP_EOL;
-	print "   " . $reason . PHP_EOL;
-	print "Check that you installed with composer, or copied the distribution correctly." . PHP_EOL;
+	print "Could not bootstrap the example program: (examples/boostrap.php)" . PHP_EOL;
+	print "If this is a project built with composer:" . PHP_EOL;
+	print "   Bootstrap could not locate the vendor folder." . PHP_EOL;
+	print "   You must run 'composer update' to resolve dependencies." . PHP_EOL;
+	print "If this is a binary distribution of the API:" . PHP_EOL;
+	print "   Bootstrap could not locate the autoload.php file." . PHP_EOL;
+	print "   Please contact support for a proper binary distribution" . PHP_EOL;
 	exit(1);
 }
