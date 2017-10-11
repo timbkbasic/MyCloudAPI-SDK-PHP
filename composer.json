@@ -3,6 +3,7 @@
     "description": "MyCloud's PHP SDK for REST APIs",
     "keywords": ["mycloud", "fulfillment", "rest", "sdk"],
     "type": "library",
+	"version": "0.1.0",
     "license": "MyCloud Fulfillment Group API License v1",
     "homepage": "http://mycloudth.github.io/MyCloud-SDK-PHP/",
     "authors": [
