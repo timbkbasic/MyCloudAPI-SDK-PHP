@@ -9,7 +9,7 @@ namespace MyCloud\Api\Core;
  * Stores all member data in a Hashmap that enables easy
  * JSON encoding/decoding.
  *
- * @package MyCloud\Core\MyCloudModel
+ * @package MyCloud\Api\Core
  */
 class MyCloudModel
 {
@@ -138,7 +138,7 @@ class MyCloudModel
      */
     public function fromArray($arr)
     {
-        if ( ! empty($arr) ) {
+        if ( ! empty($arr) && is_array($arr) ) {
             // Iterate over each element in array
             foreach ( $arr as $k => $v ) {
                 // If the value is an array, it means it will be an object after conversion
@@ -272,6 +272,45 @@ class MyCloudModel
             }
         }
         return true;
+    }
+
+    /**
+     * Converts the input key into a valid Setter Method Name
+     *
+     * @param $key
+     * @return mixed
+     */
+    private function convertToCamelCase($key)
+    {
+        return str_replace(' ', '', ucwords(str_replace(array('_', '-'), ' ', $key)));
+    }
+
+    /**
+     * Execute SDK Call to MyCloud services
+     *
+     * @param string      $url
+     * @param string      $method
+     * @param string      $payLoad
+     * @param array $headers
+     * @param ApiContext      $apiContext
+     * @return string json response of the object
+     */
+    protected static function executeCall( $url, $method, $payLoad, $headers = array(), $apiContext = null )
+    {
+        //Initialize the context and rest call object if not provided explicitly
+        $apiContext = $apiContext ? $apiContext : new ApiContext( null );
+        $config = $apiContext->getConfig();
+		$token = $apiContext->getToken();
+
+		if ( ! empty($token) ) {
+			$httpConfig = new MCHttpConfig( $url, $method, $config );
+			$http = new MCHttpConnection( $apiContext, $httpConfig, $token );
+	        $json = $http->execute( $url, $method, $payLoad, $headers );
+		} else {
+			$json = ""; // UNDONE
+		}
+
+		return $json;
     }
 
 }

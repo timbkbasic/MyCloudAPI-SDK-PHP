@@ -5,25 +5,28 @@ namespace MyCloud\Api\Model;
 use MyCloud\Api\Core\MyCloudModel;
 
 /**
- * Class Order
+ * Class OrderItem
  *
- * Represents a MyCloud Order belonging to a Shop.
+ * Represents a MyCloud Order item included in an Order
  *
  * @package MyCloud\Api\Model
  */
 class OrderItem extends MyCloudModel
 {
-	private Order $order = NULL;
+	private $order = NULL;
+
+    /**
+     * Default Constructor
+     *
+     */
+    public function __construct( $order )
+    {
+		$this->order = $order;
+    }
 
 	public function getOrder()
 	{
 		return $this->order;
-	}
-
-	public function setOrder( $order )
-	{
-		$this->order = $order;
-		return $this;
 	}
 
 }

@@ -3,13 +3,13 @@
 namespace MyCloud\Api\Core;
 
 /**
- * Class MyCloudConfigManager
+ * Class MCConfigManager
  *
  * Manages the configuration of the API.
  *
  * @package MyCloud\Api\Core
  */
-class MyCloudConfigManager
+class MCConfigManager
 {
 
     /**
@@ -34,6 +34,7 @@ class MyCloudConfigManager
         if ( defined('MCAPI_CONFIG_PATH') ) {
             $configFile = constant('MCAPI_CONFIG_PATH') . '/sdk_config.ini';
         } else {
+			// FIXME
             $configFile = implode(
 				DIRECTORY_SEPARATOR,
                 array( dirname(__FILE__), "..", "config", "sdk_config.ini" )
@@ -96,8 +97,8 @@ class MyCloudConfigManager
      */
     public function get( $key )
     {
-        if ( array_key_exists($searchKey, $this->configs) ) {
-            return $this->configs[$searchKey];
+        if ( array_key_exists($key, $this->configs) ) {
+            return $this->configs[$key];
         } else {
             return array();
         }

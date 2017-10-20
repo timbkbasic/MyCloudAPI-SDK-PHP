@@ -17,7 +17,9 @@ $topDir = root_dir( __FILE__, 2 );
 if ( $debug ) {
 	print "1) Path[top] '" . $topDir . "'" . PHP_EOL;
 }
-$composerAutoload = $topDir . DIRECTORY_SEPARATOR . 'vendor' . DIRECTORY_SEPARATOR . 'autoload.php';
+
+$composerAutoload = implode( DIRECTORY_SEPARATOR, array( $topDir, "vendor", "autoload.php" ) );
+	
 if ( ! file_exists($composerAutoload) ) {
 	// Okay, so this is a standard composer installation, with the full
 	// 'vendor/mycloudth/rest-api-php-sdk' hierarchy
@@ -28,6 +30,7 @@ if ( ! file_exists($composerAutoload) ) {
 	if ( $debug ) {
 		print "2) Path[top] '" . $topDir . "'" . PHP_EOL;
 	}
+
 	$composerAutoload = $topDir . DIRECTORY_SEPARATOR . 'autoload.php';
 	if ( ! file_exists($composerAutoload) ) {
 		$loadable = FALSE;
@@ -39,7 +42,7 @@ if ( ! file_exists($composerAutoload) ) {
 
 if ( $loadable ) {
 	if ( $debug ) {
-		"Loading: '" . $composerAutoload . "'" . PHP_EOL;
+		print "Loading: '" . $composerAutoload . "'" . PHP_EOL;
 	}
 	require $composerAutoload;
 } else {
