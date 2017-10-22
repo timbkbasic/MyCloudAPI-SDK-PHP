@@ -136,7 +136,7 @@ class MyCloudModel
      * @param $arr
      * @return $this
      */
-    public function fromArray($arr)
+    public function oldFromArray($arr)
     {
         if ( ! empty($arr) && is_array($arr) ) {
             // Iterate over each element in array
@@ -284,6 +284,15 @@ class MyCloudModel
     {
         return str_replace(' ', '', ucwords(str_replace(array('_', '-'), ' ', $key)));
     }
+
+	public function assignAttributes( $attrs )
+	{
+		if ( ! empty($attrs) && is_array($attrs) ) {
+            foreach ( $attrs as $k => $v ) {
+				$this->assignValue( $k, $v );
+			}
+		}
+	}
 
     /**
      * Execute SDK Call to MyCloud services

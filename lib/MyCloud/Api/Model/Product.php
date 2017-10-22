@@ -2,7 +2,9 @@
 
 namespace MyCloud\Api\Model;
 
+use MyCloud\Api\Core\MCError;
 use MyCloud\Api\Core\MyCloudModel;
+use MyCloud\Api\Log\MCLoggingManager;
 
 /**
  * Class Product
@@ -16,7 +18,7 @@ class Product extends MyCloudModel
 
     public static function all( $params = array(), $apiContext = null )
     {
-		$result = array();
+		$products = NULL;
 
 		// ArgumentValidator::validate($params, 'params');
         $payLoad = "";
@@ -38,17 +40,68 @@ class Product extends MyCloudModel
             $apiContext
         );
 		// print "Product::all() DATA: " . $json_data . "\n";
-		$products_data = json_decode( $json_data, true );
-		if ( is_array($products_data) ) {
-			foreach ( $products_data as $product_data ) {
-				$attrs = $product_data['attributes'];
-				$product = new Product();
-				$product->fromArray($attrs);
-				$result[] = $product;
+
+		$result = json_decode( $json_data, true );
+
+		if ( $result['success'] ) {
+			if ( isset($result['data']) && is_array($result['data']) ) {
+				$products = array();
+				foreach ( $result['data'] as $product_data ) {
+					$product = new Product();
+					$product->fromArray( $product_data );
+					$products[] = $product;
+				}
+			} else {
+				$products = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "Product list not array: " . print_r($result['data']) );
 			}
+		} else {
+			$products = new MCError( $result['message'] );
+			MCLoggingManager::getInstance(__CLASS__)
+				->error( "Failed getting Product list: " . $result['message'] );
 		}
 
-        return $result;
+        return $products;
     }
+
+    public static function get( $product_id, $apiContext = null )
+    {
+		$product = NULL;
+
+        $payLoad = array();
+        $json_data = self::executeCall(
+            "/v1/products/" . $product_id,
+            "GET",
+            $payLoad,
+            array(),
+            $apiContext
+        );
+		// print "Product::get(" . $product_id . ") DATA: " . $json_data . "\n";
+
+		$result = json_decode( $json_data, true );
+
+		if ( $result['success'] ) {
+			if ( isset($result['data']) && is_array($result['data']) ) {
+				$product = new Product();
+				$product->fromArray( $result['data'] );
+			} else {
+				$product = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "Product data not array: " . print_r($result['data']) );
+			}
+		} else {
+			$product = new MCError( $result['message'] );
+			MCLoggingManager::getInstance(__CLASS__)
+				->error( "Failed getting Product[" . $product_id . "]: " . $result['message'] );
+		}
+
+        return $product;
+    }
+
+	public function fromArray( $data )
+	{
+		$this->assignAttributes( $data['attributes'] );
+	}
 
 }

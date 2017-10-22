@@ -16,8 +16,6 @@ class DeliveryMode extends MyCloudModel
 
     public static function all( $params = array(), $apiContext = null )
     {
-		$result = array();
-
 		// ArgumentValidator::validate($params, 'params');
         $payLoad = "";
         $allowedParams = array(
@@ -37,18 +35,35 @@ class DeliveryMode extends MyCloudModel
             array(),
             $apiContext
         );
-		print "DeliveryMode::all() DATA: " . $json_data . "\n";
-		$modes_data = json_decode( $json_data, true );
-		if ( is_array($modes_data) ) {
-			foreach ( $modes_data as $mode_data ) {
-				$attrs = $mode_data['attributes'];
-				$delivery_mode = new DeliveryMode();
-				$delivery_mode->fromArray($attrs);
-				$result[] = $delivery_mode;
+		// print "DeliveryMode::all() DATA: " . $json_data . "\n";
+
+		$result = json_decode( $json_data, true );
+
+		if ( $result['success'] ) {
+			if ( isset($result['data']) && is_array($result['data']) ) {
+				$modes = array();
+				foreach ( $result['data'] as $mode_data ) {
+					$delivery_mode = new DeliveryMode();
+					$delivery_mode->fromArray( $mode_data );
+					$modes[] = $delivery_mode;
+				}
+			} else {
+				$modes = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "DeliveryMode list not array: " . print_r($result['data']) );
 			}
+		} else {
+			$modes = new MCError( $result['message'] );
+			MCLoggingManager::getInstance(__CLASS__)
+				->error( "Failed getting DeliveryMode list: " . $result['message'] );
 		}
 
-        return $result;
+        return $modes;
     }
+
+	public function fromArray( $data )
+	{
+		$this->assignAttributes( $data['attributes'] );
+	}
 
 }

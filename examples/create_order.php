@@ -3,14 +3,16 @@
 define('MCAPI_CONFIG_PATH', '.');
 require 'bootstrap.php';
 
-use \MyCloud\Api\Model\DeliveryMode;
-use \MyCloud\Api\Model\Order;
-use \MyCloud\Api\Model\Product;
+use MyCloud\Api\Model\Customer;
+use MyCloud\Api\Model\DeliveryMode;
+use MyCloud\Api\Model\Order;
+use MyCloud\Api\Model\Product;
 
 $products = Product::all();
+$customers = Customer::all();
 $delivery_modes = DeliveryMode::all();
 
-$order = new Order();
+$createOrder = new Order();
 
 $attachment = 'RECEIPT';
 $filename = 'TestReceipt.jpg';
@@ -18,20 +20,78 @@ $filetype = 'image/jpeg';
 $filepath = '/Users/time/Downloads/TestReceipt.jpg';
 
 
-$order->setName('Tim Endres')
+$createOrder->setName('Tim Endres')
 	->setPhoneNumber('+66909168068')
 	->setEmail('tim@bkbasic.com')
 	->setAddress('#5 Sukhumvit Soi 45, Wattana, Bangkok')
 	->setPostcode('10110')
+	->setCustomer( $customers[0] )
 	->setDeliveryMode( $delivery_modes[0] )
 	->addProduct( $products[0], 1, 1200 )
 	->addProduct( $products[1], 2, 900 )
 	->attachFile( $attachment, $filename, $filetype, $filepath );
 
-$order_id = $order->create();
+$order = $createOrder->create();
 
-print "Create Order " . ($order_id < 0 ? "failed" : "succeeded") .
-	"." . ($order_id > 0 ? (" Order ID=" . $order_id) . "." : "") . PHP_EOL;
+if ( $order instanceof MCError ) {
+	print "ERROR creating Order:" . PHP_EOL;
+	print "      " . $order->getMessage() . PHP_EOL;
+} else {
+	print "Created Order:" . PHP_EOL;
+	print "ORDER[" . $order->id . "]" . PHP_EOL;
+	print "   status: " . $order->status . PHP_EOL;
+	print "   shopId: " . $order->shop_id . PHP_EOL;
+	print "   mcNumber: " . $order->mc_number . PHP_EOL;
+	print "   Order # " . $order->order_number . PHP_EOL;
+	print "   Weight: " . $order->weight . PHP_EOL;
+	print "   Shipping Information:" . PHP_EOL;
+	print "      Name: " . $order->name . PHP_EOL;
+	print "      Address: " . $order->address . PHP_EOL;
+	print "      PostCode: " . $order->postcode . PHP_EOL;
+	print "      Phone # " . $order->phone_number . PHP_EOL;
+
+	$customer = $order->getCustomer();
+	if ( ! empty($customer) ) {
+		print "   Customer[" . $customer->id . "]" . PHP_EOL;
+		print "      Code: " . $customer->code . PHP_EOL;
+		print "      Name: " . $customer->name . PHP_EOL;
+		print "      Address: " . $customer->address . PHP_EOL;
+		print "      Postcode: " . $customer->postcode . PHP_EOL;
+		print "      SocialID: " . $customer->social_id . PHP_EOL;
+		print "      Phone # " . $customer->phone_number . PHP_EOL;
+		print "      E-mail: " . $customer->email . PHP_EOL;
+		print "      Note: " . $customer->note . PHP_EOL;
+	} else {
+		print "   HAS NO Customer" . PHP_EOL;
+	}
+
+	$delivery_mode = $order->getDeliveryMode();
+	if ( ! empty($delivery_mode) ) {
+		print "   DeliveryMode[" . $delivery_mode->id . "]" . PHP_EOL;
+		print "      Name: " . $delivery_mode->name . PHP_EOL;
+		print "      Code: " . $delivery_mode->code . PHP_EOL;
+		print "      Contact: " . $delivery_mode->contact . PHP_EOL;
+	} else {
+		print "   HAS NO deliveryMode" . PHP_EOL;
+	}
+
+	print "   --- Order Items ------------------------" . PHP_EOL;
+	foreach ( $order->getOrderItems() as $order_item ) {
+		print "   OrderItem[" . $order_item->id . "]" . PHP_EOL;
+		print "      Price: " . $order_item->price . PHP_EOL;
+		print "      Quantity: " . $order_item->quantity . PHP_EOL;
+		$product = $order_item->getProduct();
+		if ( ! empty($product) ) {
+			print "      --- Product -------------------------" . PHP_EOL;
+			print "          Product[" . $product->id . "]" . PHP_EOL;
+			print "          SKU: " . $product->sku . PHP_EOL;
+			print "          Name: " . $product->name . PHP_EOL;
+			print "          Description: " . $product->description . PHP_EOL;
+			print "          PhotoUrl: " . $product->photo_url . PHP_EOL;
+			print "          SupplierRef: " . $product->supplier_ref . PHP_EOL;
+		}
+	}
+}
 
 /*
  * Common stack trace when API KEY is not set properly, almost always caused

@@ -3,6 +3,7 @@
 namespace MyCloud\Api\Model;
 
 use \DateTime;
+use MyCloud\Api\Core\MCError;
 use MyCloud\Api\Core\MyCloudModel;
 use MyCloud\Api\Core\ReflectionUtil;
 use MyCloud\Api\Log\MCLoggingManager;
@@ -39,12 +40,10 @@ class Order extends MyCloudModel
 	 */
 	private $order_items = array();
 	
+	private $customer = NULL;
+	
 	private $delivery_mode = NULL;
 
-	/*
-	 * Products are added to create a new Order.
-	 */
-	private $products = array();
 	private $attachments = array();
 
 	public function getId() {
@@ -122,15 +121,9 @@ class Order extends MyCloudModel
 	public function getShop()
 	{
 		if ( $this->shop == NULL ) {
-			
+			// FIXME
 		}
 		return $this->shop;
-	}
-
-	public function addOrderItem( $order_item )
-	{
-		$this->order_items[] = $order_item;
-		return $this;
 	}
 
 	public function getOrderItems()
@@ -143,27 +136,47 @@ class Order extends MyCloudModel
 		return $this->attachments;
 	}
 
+	public function getCustomer()
+	{
+		return $this->customer;
+	}
+
+	public function setCustomer( $customer )
+	{
+		$this->customer = $customer;
+		return $this;
+	}
+
+	public function getDeliveryMode()
+	{
+		return $this->delivery_mode;
+	}
+
 	public function setDeliveryMode( $delivery_mode )
 	{
 		$this->delivery_mode = $delivery_mode;
 		return $this;
 	}
 
+	public function addOrderItem( $order_item )
+	{
+		$this->order_items[] = $order_item;
+		return $this;
+	}
+
 	public function addProduct( $product, $quantity, $price )
 	{
-		$order_item = new OrderItem( $this->id );
-		$order_item->product_id = $product->id;
-		$order_item->quantity = $quantity;
-		$order_item->price = $price;
+		$order_item = new OrderItem( $this, $product, $quantity, $price );
 		$this->addOrderItem( $order_item );
 		return $this;
 	}
 
-	public function addProducts( $products )
-	{
-		$this->products = array_merge( $this->products, $products );
-		return $this;
-	}
+	//
+	// public function addOrderItems( $order_items )
+	// {
+	// 	$this->order_items = array_merge( $this->order_items, $order_items );
+	// 	return $this;
+	// }
 
 	public function attachFile( $attachment, $filename, $filetype, $filepath )
 	{
@@ -204,22 +217,20 @@ class Order extends MyCloudModel
 		$result = json_decode( $json_data, true );
 
 		if ( $result['success'] ) {
-			if ( is_array($result['data']) ) {
+			if ( isset($result['data']) && is_array($result['data']) ) {
 				$orders = array();
 				foreach ( $result['data'] as $order_data ) {
 					$order = new Order();
-					$order->fromArray( $order_data['attributes'] );
+					$order->fromArray( $order_data );
 					$orders[] = $order;
-					if ( is_array($order_data['order_items']) ) {
-						foreach ( $order_data['order_items'] as $order_item_data ) {
-							$order_item = new OrderItem( $order );
-							$order_item->fromArray( $order_item_data['attributes'] );
-							$order->addOrderItem( $order_item );
-						}
-					}
 				}
+			} else {
+				$orders = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "Order list not array: " . print_r($result['data']) );
 			}
 		} else {
+			$orders = new MCError( $result['message'] );
 			MCLoggingManager::getInstance(__CLASS__)
 				->error( "Failed getting Order list: " . $result->message );
 		}
@@ -239,26 +250,23 @@ class Order extends MyCloudModel
             array(),
             $apiContext
         );
-		print "Order::get(" . $orderId . ") DATA: " . $json_data . "\n";
+		// print "Order::get(" . $orderId . ") DATA: " . $json_data . "\n";
 
 		$result = json_decode( $json_data, true );
 
 		if ( $result['success'] ) {
-			$data = $result['data'];
-			$order = new Order();
-			$order->fromArray( $data['attributes'] );
-			$order_items_data = $data['order_items'];
-			if ( is_array($order_items_data) ) {
-				foreach ( $order_items_data as $order_item_data ) {
-					$attrs = $order_item_data['attributes'];
-					$order_item = new OrderItem( $order );
-					$order_item->fromArray($attrs);
-					$order->order_items[] = $order_item;
-				}
+			if ( isset($result['data']) && is_array($result['data']) ) {
+				$order = new Order();
+				$order->fromArray( $result['data'] );
+			} else {
+				$order = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "Order data not array: " . print_r($result['data']) );
 			}
 		} else {
+			$order = new MCError( $result['message'] );
 			MCLoggingManager::getInstance(__CLASS__)
-				->error( "Failed getting Order list: " . $result->message );
+				->error( "Failed getting Order list: " . $result['message'] );
 		}
 
         return $order;
@@ -266,13 +274,15 @@ class Order extends MyCloudModel
 
     public function create( $apiContext = null )
     {
+		$order = NULL;
         $payload = $this->toArray();
 
+		$payload['customer_id'] = empty($this->customer) ? '0' : $this->customer->id;
 		$payload['delivery_mode_id'] = empty($this->delivery_mode) ? '0' : $this->delivery_mode->id;
 
 		$index  = 0;
 		foreach ( $this->order_items as $order_item ) {
-			$payload['order_items[' . $index . '][product_id]'] = $order_item->product_id;
+			$payload['order_items[' . $index . '][product_id]'] = $order_item->product->id;
 			$payload['order_items[' . $index . '][quantity]'] = $order_item->quantity;
 			$payload['order_items[' . $index . '][price]'] = $order_item->price;
 			$index++;
@@ -298,17 +308,51 @@ class Order extends MyCloudModel
             array(),
             $apiContext
         );
-
 		// print "CREATE ORDER: JSON RESULT: " . $json_data . PHP_EOL;
 
-        // $this->fromJson( $json_data );
-		$result = json_decode( $json_data );
-		if ( ! $result->success ) {
+		$result = json_decode( $json_data, true );
+
+		if ( $result['success'] ) {
+			if ( isset($result['data']) && is_array($result['data']) ) {
+				$order = new Order();
+				$order->fromArray( $result['data'] );
+			} else {
+				$order = new MCError( 'API Returned invalid data' );
+				MCLoggingManager::getInstance(__CLASS__)
+					->error( "Order data not array: " . print_r($result['data']) );
+			}
+		} else {
+			$order = new MCError( $result['message'] );
 			MCLoggingManager::getInstance(__CLASS__)
-				->error( "Failed creating Order: " . $result->message );
+				->error( "Failed creating Order: " . $result['message'] );
 		}
 
-        return $result->order_id;
+        return $order;
     }
+
+	public function fromArray( $data )
+	{
+		$this->assignAttributes( $data['attributes'] );
+
+		if ( isset($data['customer']) && is_array($data['customer']) && !empty($data['customer']) ) {
+			$customer = new Customer( $this );
+			$customer->fromArray( $data['customer'] );
+			$this->customer = $customer;
+		}
+
+		if ( isset($data['delivery_mode']) && is_array($data['delivery_mode']) && !empty($data['delivery_mode']) ) {
+			$delivery_mode = new DeliveryMode( $this );
+			$delivery_mode->fromArray( $data['delivery_mode'] );
+			$this->delivery_mode = $delivery_mode;
+		}
+
+		if ( isset($data['order_items']) && is_array($data['order_items']) ) {
+			foreach ( $data['order_items'] as $order_item_data ) {
+				$order_item = new OrderItem( $this );
+				$order_item->fromArray( $order_item_data );
+				$this->order_items[] = $order_item;
+			}
+		}
+	}
 
 }
